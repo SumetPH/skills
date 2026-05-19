@@ -2,7 +2,7 @@
 
 # Configuration
 SOURCE_BASE_DIR="$HOME/Development/skills"
-TARGET_DIR="$HOME/.agents/skills"
+TARGET_DIR="$HOME/.gemini/config/skills"
 
 echo "Syncing skills from $SOURCE_BASE_DIR to $TARGET_DIR..."
 
