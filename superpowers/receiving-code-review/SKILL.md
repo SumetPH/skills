@@ -3,9 +3,6 @@ name: receiving-code-review
 description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 ---
 
-> [!IMPORTANT]
-> สื่อสาร ถามคำถาม และดำเนินขั้นตอนการโต้ตอบทั้งหมดเป็นภาษาไทย
-
 # Code Review Reception
 
 ## Overview

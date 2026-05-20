@@ -3,9 +3,6 @@ name: brainstorming
 description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
 ---
 
-> [!IMPORTANT]
-> สื่อสาร ถามคำถาม และดำเนินขั้นตอนการโต้ตอบทั้งหมดเป็นภาษาไทย
-
 # Brainstorming Ideas Into Designs
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
