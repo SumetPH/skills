@@ -1,72 +1,47 @@
 ---
 name: api-implement-nuxt2
-description: Implement API calls in Nuxt 2 using @nuxtjs/axios. Use this skill when the user asks to fetch data, create a resource, or integrate a backend endpoint. It intelligently detects existing project patterns (like centralized repository plugins) or implements calls directly within asyncData, fetch, or methods, following established authentication and error-handling conventions in the codebase.
+description: Use when implementing API integrations, setting up axios calls, managing client-side data fetching (mounted/fetch/asyncData), or handling API states in Nuxt 2 (Vue 2) SPA applications.
 ---
 
-# API Implementation (Nuxt 2)
+# API Implementation - Nuxt 2 (SPA-focused)
 
-A specialized skill for implementing backend API integrations in Nuxt 2 applications using the `@nuxtjs/axios` module.
+## Overview
+Guidelines and best practices for setting up and calling APIs in Nuxt 2 Single Page Applications (SPA) using `@nuxtjs/axios` and client-side hooks (`mounted`, component-level `fetch`, and `asyncData`).
 
-## Workflow
+## When to Use
+- Implementing client-side API requests in Nuxt 2.
+- Handling states such as loading and error handlers for SPA pages and components.
+- Setting up Axios plugins and interceptors (e.g. inject tokens, global error handling).
 
-1.  **Project Context Analysis:**
-    *   Check `nuxt.config.js` for axios configuration and proxy settings.
-    *   Search for custom axios plugins (e.g., `plugins/axios.js`) that might handle global interceptors, authentication headers, or error handling.
-    *   Detect if a "Repository Pattern" is in use (e.g., `$api.users.get()`) by checking `plugins/` or `api/` directories.
+### When NOT to Use
+- Nuxt 3 projects (use `api-implement-nuxt3` instead).
+- SSR-focused optimization instructions (e.g. server-side payload caching).
 
-2.  **Implementation Strategy:**
-    *   **Existing Pattern:** If a centralized repository or custom plugin is detected, extend it or use it to implement the new API call.
-    *   **Standard Nuxt 2 Hook:** Use `asyncData` or the Nuxt 2 `fetch()` hook for server-side data fetching to ensure SEO and performance.
-    *   **Methods:** For client-side actions (e.g., form submission), implement calls within Vue methods using `this.$axios`.
-    *   **Error Handling:** Implement try-catch blocks or use axios interceptors to handle 4xx/5xx responses, showing appropriate feedback to the user.
+## Core Patterns
 
-3.  **Code Structure:**
-    *   **Data Binding:** Map API responses to reactive data properties.
-    *   **Loading States:** Manage a `loading` state to provide visual feedback during requests.
-    *   **Authentication:** Ensure requests include necessary tokens (e.g., from `this.$auth` or local storage) if the endpoint is protected.
-
-## Guidelines
-
--   **SEO Friendly:** Favor `asyncData` for primary page content.
--   **Security:** Never hardcode API keys or sensitive URLs; use `process.env` or `publicRuntimeConfig`.
--   **Context Awareness:** Always check if the project uses a specific wrapper for axios before writing raw `$axios` calls.
-
-## Examples
-
-### Case 1: Simple GET in `asyncData`
-**Output Snippet:**
-```javascript
-export default {
-  async asyncData({ $axios, error }) {
-    try {
-      const { data } = await $axios.get('/api/posts')
-      return { posts: data }
-    } catch (e) {
-      error({ statusCode: e.response?.status || 500, message: 'Failed to fetch posts' })
-    }
-  }
-}
-```
-
-### Case 2: POST request in `methods` with loading state
-**Output Snippet:**
-```javascript
+### 1. Standard Client Fetching: `mounted` or `methods`
+Most common pattern in SPA apps for user-triggered loading or deferred loading.
+```js
+// components/PostList.vue
 export default {
   data() {
     return {
-      form: { email: '', password: '' },
-      loading: false
+      posts: [],
+      loading: false,
+      error: null
     }
   },
+  mounted() {
+    this.fetchPosts()
+  },
   methods: {
-    async handleLogin() {
+    async fetchPosts() {
       this.loading = true
+      this.error = null
       try {
-        const response = await this.$axios.$post('/api/auth/login', this.form)
-        this.$toast.success('Login successful')
-        // handle redirection or state update
-      } catch (e) {
-        this.$toast.error(e.response?.data?.message || 'Login failed')
+        this.posts = await this.$axios.$get('/posts')
+      } catch (err) {
+        this.error = err.message || 'Failed to load posts'
       } finally {
         this.loading = false
       }
@@ -75,17 +50,49 @@ export default {
 }
 ```
 
-### Case 3: Extending a Repository (If detected)
-If the project uses `this.$api.users.list()`, the skill should follow that:
-```javascript
-// In a repository plugin or directly adding to existing one
-export default (context, inject) => {
-  const usersRepository = {
-    list: () => context.$axios.$get('/users'),
-    get: (id) => context.$axios.$get(`/users/${id}`),
-    // Adding new method
-    create: (data) => context.$axios.$post('/users', data)
+### 2. Route-bound/Pre-render Fetching: `asyncData`
+Runs on route transition before navigating to the page. Blocks navigation transition until resolved.
+> [!IMPORTANT]
+> `asyncData` has **no access** to `this`. Access Axios via the `context` argument.
+
+```js
+// pages/posts/_id.vue
+export default {
+  async asyncData({ $axios, params, error }) {
+    try {
+      const post = await $axios.$get(`/posts/${params.id}`)
+      return { post } // Merges into component local data
+    } catch (err) {
+      error({ statusCode: err.response?.status || 500, message: err.message })
+    }
   }
-  inject('usersApi', usersRepository)
 }
 ```
+
+### 3. Axios Interceptors (Plugins)
+Defined in `plugins/axios.js` to manage authentication tokens and API headers.
+```js
+// plugins/axios.js
+export default function ({ $axios, redirect }) {
+  $axios.onRequest(config => {
+    // Add auth token dynamically from localStorage/sessionStorage
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  })
+
+  $axios.onError(error => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token')
+      redirect('/login')
+    }
+  })
+}
+```
+
+## Common Mistakes
+- **Accessing `localStorage` inside SSR-safe code**: Even in `ssr: false` mode, referencing `window` or `localStorage` directly in root module scope of files (outside of `mounted`, client plugins, or functions called on the client) can lead to reference errors during build or testing.
+- **Using `this` inside `asyncData`**: Returns `undefined` as it resolves before the component instance exists.
+- **Forgetting Loading States**: In SPA mode, data fetch starts on navigation. Always implement explicit `loading` states to give users immediate feedback while waiting for API responses.
